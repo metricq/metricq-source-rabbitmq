@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with metricq-source-rabbitmq.  If not, see <http://www.gnu.org/licenses/>.
 import urllib
+from typing import Dict, Optional
 
 import aiohttp
 import metricq
@@ -32,13 +33,13 @@ class RabbitMqSource(IntervalSource):
         super().__init__(*args, **kwargs)
         self._vhosts = {}
         self._host: URL = None
-        self._username = None
-        self._password = None
-        self._prefix = ""
-        self._last_queue_counts = {}
-        self._last_queue_timestamp = None
-        self._last_exchange_counts = {}
-        self._last_exchange_timestamp = None
+        self._username: Optional[str] = None
+        self._password: Optional[str] = None
+        self._prefix: str = ""
+        self._last_queue_counts: Dict[str, float] = {}
+        self._last_queue_timestamp: Timestamp = None
+        self._last_exchange_counts: Dict[str, float] = {}
+        self._last_exchange_timestamp: Timestamp = None
 
     @metricq.rpc_handler("config")
     async def _on_config(self, **config):
@@ -183,6 +184,5 @@ class RabbitMqSource(IntervalSource):
                     self._last_queue_timestamp = current_queue_timestamp
             try:
                 await self.flush()
-                pass
             except Exception as e:
                 logger.error(f"Exception in send: {e}")
