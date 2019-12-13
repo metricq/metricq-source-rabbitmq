@@ -59,7 +59,7 @@ class RabbitMqSource(IntervalSource):
             for exchange, exchange_config in vhost_config.get("exchanges", {}).items():
                 metric_name_prefix = f"{self._prefix}.{vhost['name']}.exchange.{exchange.replace('.', '_').replace('-','_')}"
                 for rate in exchange_config.get("rates", []):
-                    metrics[f"{metric_name_prefix}.rate.{rate}"] = {
+                    metrics[f"{metric_name_prefix}.{rate}.rate"] = {
                         "unit": "msg/s",
                         "rate": rate,
                     }
@@ -67,12 +67,12 @@ class RabbitMqSource(IntervalSource):
             for queue, queue_config in vhost_config.get("queues", {}).items():
                 metric_name_prefix = f"{self._prefix}.{vhost['name']}.queue.{queue.replace('.', '_').replace('-','_')}"
                 for rate in queue_config.get("rates", []):
-                    metrics[f"{metric_name_prefix}.rate.{rate}"] = {
+                    metrics[f"{metric_name_prefix}.{rate}.rate"] = {
                         "unit": "msg/s",
                         "rate": rate,
                     }
                 for count in queue_config.get("counts", []):
-                    metrics[f"{metric_name_prefix}.count.{count}"] = {
+                    metrics[f"{metric_name_prefix}.{count}.count"] = {
                         "unit": "msg",
                         "rate": rate,
                     }
@@ -97,7 +97,7 @@ class RabbitMqSource(IntervalSource):
                         "rates", []
                     ):
                         current_count = exchange["message_stats"][rate]
-                        metric_name = f"{metric_name_prefix}.rate.{rate}"
+                        metric_name = f"{metric_name_prefix}.{rate}.rate"
 
                         if (
                             self._last_exchange_timestamp is not None
@@ -133,7 +133,7 @@ class RabbitMqSource(IntervalSource):
                     metric_name_prefix = f"{self._prefix}.{vhost}.queue.{queue['name'].replace('.', '_').replace('-', '_')}"
                     for rate in vhost_config["queues"][queue["name"]].get("rates", []):
                         current_count = queue["message_stats"][rate]
-                        metric_name = f"{metric_name_prefix}.rate.{rate}"
+                        metric_name = f"{metric_name_prefix}.{rate}.rate"
 
                         if (
                             self._last_queue_timestamp is not None
@@ -157,7 +157,7 @@ class RabbitMqSource(IntervalSource):
                         "counts", []
                     ):
                         current_count = queue[count]
-                        metric_name = f"{metric_name_prefix}.count.{count}"
+                        metric_name = f"{metric_name_prefix}.{count}.count"
                         logger.debug(f"{metric_name} count is {current_count}")
                         self[metric_name].append(current_queue_timestamp, current_count)
             self._last_queue_timestamp = current_queue_timestamp
