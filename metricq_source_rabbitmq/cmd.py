@@ -39,7 +39,7 @@ logger.handlers[0].formatter = logging.Formatter(
 @click.command()
 @click.option("--server", default="amqp://localhost/")
 @click.option("--token", default="source-rabbitmq")
-@click.option("--monitor/--no-monitor", default=True)
+@click.option("--monitor/--no-monitor", default=False)
 @click.option("--log-to-journal/--no-log-to-journal", default=False)
 @click_log.simple_verbosity_option(logger)
 def source_cmd(server, token, monitor, log_to_journal):
