@@ -82,106 +82,94 @@ class RabbitMqSource(IntervalSource):
         await self.declare_metrics(metrics)
         logger.info("declared {} metrics".format(len(metrics)))
 
+    async def _update_exchanges(self, session: aiohttp.ClientSession, vhost: str):
+        vhost_config = self._vhosts[vhost]
+        async with session.get(
+            self._host
+            / "api/exchanges"
+            / urllib.parse.quote_plus(vhost_config["vhost"])
+        ) as resp:
+            current_exchange_timestamp = Timestamp.now()
+            for exchange in await resp.json():
+                if exchange["name"] in vhost_config.get("exchanges", {}):
+                    metric_name_prefix = f"{self._prefix}.{vhost}.exchange.{exchange['name'].replace('.', '_').replace('-', '_')}"
+                    for rate in vhost_config["exchanges"][exchange["name"]].get(
+                        "rates", []
+                    ):
+                        current_count = exchange["message_stats"][rate]
+                        metric_name = f"{metric_name_prefix}.rate.{rate}"
+
+                        if (
+                            self._last_exchange_timestamp is not None
+                            and metric_name in self._last_exchange_counts
+                        ):
+                            diff = (
+                                current_exchange_timestamp
+                                - self._last_exchange_timestamp
+                            )
+                            current_rate = (
+                                current_count - self._last_exchange_counts[metric_name]
+                            ) / diff.s
+                            logger.debug(f"{metric_name} rate is {current_rate}")
+                            self[metric_name].append(
+                                current_exchange_timestamp, current_rate
+                            )
+                        else:
+                            logger.debug(f"{metric_name} count is {current_count}")
+                            logger.info(
+                                f"First request for {metric_name}. Only storing for internal state!"
+                            )
+                        self._last_exchange_counts[metric_name] = current_count
+            self._last_exchange_timestamp = current_exchange_timestamp
+
+    async def _update_queues(self, session: aiohttp.ClientSession, vhost: str):
+        vhost_config = self._vhosts[vhost]
+        async with session.get(
+            self._host / "api/queues" / urllib.parse.quote_plus(vhost_config["vhost"])
+        ) as resp:
+            current_queue_timestamp = Timestamp.now()
+            for queue in await resp.json():
+                if queue["name"] in vhost_config.get("queues", {}):
+                    metric_name_prefix = f"{self._prefix}.{vhost}.queue.{queue['name'].replace('.', '_').replace('-', '_')}"
+                    for rate in vhost_config["queues"][queue["name"]].get("rates", []):
+                        current_count = queue["message_stats"][rate]
+                        metric_name = f"{metric_name_prefix}.rate.{rate}"
+
+                        if (
+                            self._last_queue_timestamp is not None
+                            and metric_name in self._last_queue_counts
+                        ):
+                            diff = current_queue_timestamp - self._last_queue_timestamp
+                            current_rate = (
+                                current_count - self._last_queue_counts[metric_name]
+                            ) / diff.s
+                            logger.debug(f"{metric_name} rate is {current_rate}")
+                            self[metric_name].append(
+                                current_queue_timestamp, current_rate
+                            )
+                        else:
+                            logger.debug(f"{metric_name} count is {current_count}")
+                            logger.info(
+                                f"First request for {metric_name}. Only storing for internal state!"
+                            )
+                        self._last_queue_counts[metric_name] = current_count
+                    for count in vhost_config["queues"][queue["name"]].get(
+                        "counts", []
+                    ):
+                        current_count = queue[count]
+                        metric_name = f"{metric_name_prefix}.count.{count}"
+                        logger.debug(f"{metric_name} count is {current_count}")
+                        self[metric_name].append(current_queue_timestamp, current_count)
+            self._last_queue_timestamp = current_queue_timestamp
+
     async def update(self):
         auth = None
         if self._username and self._password:
             auth = aiohttp.BasicAuth(login=self._username, password=self._password)
         async with aiohttp.ClientSession(auth=auth) as session:
-            for vhost, vhost_config in self._vhosts.items():
-                async with session.get(
-                    self._host
-                    / "api/exchanges"
-                    / urllib.parse.quote_plus(vhost_config["vhost"])
-                ) as resp:
-                    current_exchange_timestamp = Timestamp.now()
-                    for exchange in await resp.json():
-                        if exchange["name"] in vhost_config.get("exchanges", {}):
-                            metric_name_prefix = f"{self._prefix}.{vhost}.exchange.{exchange['name'].replace('.', '_').replace('-', '_')}"
-                            for rate in vhost_config["exchanges"][exchange["name"]].get(
-                                "rates", []
-                            ):
-                                current_count = exchange["message_stats"][rate]
-                                metric_name = f"{metric_name_prefix}.rate.{rate}"
-
-                                if (
-                                    self._last_exchange_timestamp is not None
-                                    and metric_name in self._last_exchange_counts
-                                ):
-                                    diff = (
-                                        current_exchange_timestamp
-                                        - self._last_exchange_timestamp
-                                    )
-                                    current_rate = (
-                                        current_count
-                                        - self._last_exchange_counts[metric_name]
-                                    ) / diff.s
-                                    logger.debug(
-                                        f"{metric_name} rate is {current_rate}"
-                                    )
-                                    self[metric_name].append(
-                                        current_exchange_timestamp, current_rate
-                                    )
-                                else:
-                                    logger.debug(
-                                        f"{metric_name} count is {current_count}"
-                                    )
-                                    logger.info(
-                                        f"First request for {metric_name}. Only storing for internal state!"
-                                    )
-                                self._last_exchange_counts[metric_name] = current_count
-                    self._last_exchange_timestamp = current_exchange_timestamp
-
-                async with session.get(
-                    self._host
-                    / "api/queues"
-                    / urllib.parse.quote_plus(vhost_config["vhost"])
-                ) as resp:
-                    current_queue_timestamp = Timestamp.now()
-                    for queue in await resp.json():
-                        if queue["name"] in vhost_config.get("queues", {}):
-                            metric_name_prefix = f"{self._prefix}.{vhost}.queue.{queue['name'].replace('.', '_').replace('-','_')}"
-                            for rate in vhost_config["queues"][queue["name"]].get(
-                                "rates", []
-                            ):
-                                current_count = queue["message_stats"][rate]
-                                metric_name = f"{metric_name_prefix}.rate.{rate}"
-
-                                if (
-                                    self._last_queue_timestamp is not None
-                                    and metric_name in self._last_queue_counts
-                                ):
-                                    diff = (
-                                        current_queue_timestamp
-                                        - self._last_queue_timestamp
-                                    )
-                                    current_rate = (
-                                        current_count
-                                        - self._last_queue_counts[metric_name]
-                                    ) / diff.s
-                                    logger.debug(
-                                        f"{metric_name} rate is {current_rate}"
-                                    )
-                                    self[metric_name].append(
-                                        current_queue_timestamp, current_rate
-                                    )
-                                else:
-                                    logger.debug(
-                                        f"{metric_name} count is {current_count}"
-                                    )
-                                    logger.info(
-                                        f"First request for {metric_name}. Only storing for internal state!"
-                                    )
-                                self._last_queue_counts[metric_name] = current_count
-                            for count in vhost_config["queues"][queue["name"]].get(
-                                "counts", []
-                            ):
-                                current_count = queue[count]
-                                metric_name = f"{metric_name_prefix}.count.{count}"
-                                logger.debug(f"{metric_name} count is {current_count}")
-                                self[metric_name].append(
-                                    current_queue_timestamp, current_count
-                                )
-                    self._last_queue_timestamp = current_queue_timestamp
+            for vhost in self._vhosts:
+                await self._update_exchanges(session, vhost)
+                await self._update_queues(session, vhost)
             try:
                 await self.flush()
             except Exception as e:
