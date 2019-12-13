@@ -49,7 +49,7 @@ class RabbitMqSource(IntervalSource):
         self._username = config.get("username")
         self._password = config.get("password")
 
-        rate = 1.0 / self.period
+        metric_rate = 1.0 / self.period
 
         metrics = {}
         for vhost in config.get("vhosts", []):
@@ -61,7 +61,7 @@ class RabbitMqSource(IntervalSource):
                 for rate in exchange_config.get("rates", []):
                     metrics[f"{metric_name_prefix}.{rate}.rate"] = {
                         "unit": "msg/s",
-                        "rate": rate,
+                        "rate": metric_rate,
                     }
 
             for queue, queue_config in vhost_config.get("queues", {}).items():
@@ -69,12 +69,12 @@ class RabbitMqSource(IntervalSource):
                 for rate in queue_config.get("rates", []):
                     metrics[f"{metric_name_prefix}.{rate}.rate"] = {
                         "unit": "msg/s",
-                        "rate": rate,
+                        "rate": metric_rate,
                     }
                 for count in queue_config.get("counts", []):
                     metrics[f"{metric_name_prefix}.{count}.count"] = {
                         "unit": "msg",
-                        "rate": rate,
+                        "rate": metric_rate,
                     }
 
             self._vhosts[vhost["name"]] = vhost_config
