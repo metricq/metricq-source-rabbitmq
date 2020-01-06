@@ -100,7 +100,7 @@ class RabbitMqSource(IntervalSource):
                             try:
                                 current_count = exchange["message_stats"][rate]
                             except KeyError:
-                                logger.info(
+                                logger.debug(
                                     f"Message stat {rate} for exchange {exchange['name']} missing."
                                 )
                                 continue
@@ -148,7 +148,7 @@ class RabbitMqSource(IntervalSource):
                             try:
                                 current_count = queue["message_stats"][rate]
                             except KeyError:
-                                logger.info(
+                                logger.debug(
                                     f"Message stat {rate} for queue {queue['name']} missing."
                                 )
                                 continue
