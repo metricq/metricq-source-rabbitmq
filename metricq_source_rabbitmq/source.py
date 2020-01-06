@@ -97,7 +97,13 @@ class RabbitMqSource(IntervalSource):
                         for rate in vhost_config["exchanges"][exchange["name"]].get(
                             "rates", []
                         ):
-                            current_count = exchange["message_stats"][rate]
+                            try:
+                                current_count = exchange["message_stats"][rate]
+                            except KeyError:
+                                logger.info(
+                                    f"Message stat {rate} for exchange {exchange['name']} missing."
+                                )
+                                continue
                             metric_name = f"{metric_name_prefix}.{rate}.rate"
 
                             if (
@@ -139,7 +145,13 @@ class RabbitMqSource(IntervalSource):
                         for rate in vhost_config["queues"][queue["name"]].get(
                             "rates", []
                         ):
-                            current_count = queue["message_stats"][rate]
+                            try:
+                                current_count = queue["message_stats"][rate]
+                            except KeyError:
+                                logger.info(
+                                    f"Message stat {rate} for queue {queue['name']} missing."
+                                )
+                                continue
                             metric_name = f"{metric_name_prefix}.{rate}.rate"
 
                             if (
