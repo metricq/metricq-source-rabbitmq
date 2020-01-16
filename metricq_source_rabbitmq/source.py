@@ -37,9 +37,9 @@ class RabbitMqSource(IntervalSource):
         self._password: Optional[str] = None
         self._prefix: str = ""
         self._last_queue_counts: Dict[str, float] = {}
-        self._last_queue_timestamp: Timestamp = None
+        self._last_queue_timestamp: Dict[str, Timestamp] = {}
         self._last_exchange_counts: Dict[str, float] = {}
-        self._last_exchange_timestamp: Timestamp = None
+        self._last_exchange_timestamp: Dict[str, Timestamp] = {}
 
     @metricq.rpc_handler("config")
     async def _on_config(self, **config):
@@ -107,12 +107,12 @@ class RabbitMqSource(IntervalSource):
                             metric_name = f"{metric_name_prefix}.{rate}.rate"
 
                             if (
-                                self._last_exchange_timestamp is not None
+                                vhost in self._last_exchange_timestamp
                                 and metric_name in self._last_exchange_counts
                             ):
                                 diff = (
                                     current_exchange_timestamp
-                                    - self._last_exchange_timestamp
+                                    - self._last_exchange_timestamp[vhost]
                                 )
                                 current_rate = (
                                     current_count
@@ -130,7 +130,7 @@ class RabbitMqSource(IntervalSource):
                             self._last_exchange_counts[metric_name] = current_count
             except aiohttp.ContentTypeError as exception:
                 logger.error(f"Can't decode json response! {exception}")
-            self._last_exchange_timestamp = current_exchange_timestamp
+            self._last_exchange_timestamp[vhost] = current_exchange_timestamp
 
     async def _update_queues(self, session: aiohttp.ClientSession, vhost: str):
         vhost_config = self._vhosts[vhost]
@@ -155,11 +155,12 @@ class RabbitMqSource(IntervalSource):
                             metric_name = f"{metric_name_prefix}.{rate}.rate"
 
                             if (
-                                self._last_queue_timestamp is not None
+                                vhost in self._last_queue_timestamp
                                 and metric_name in self._last_queue_counts
                             ):
                                 diff = (
-                                    current_queue_timestamp - self._last_queue_timestamp
+                                    current_queue_timestamp
+                                    - self._last_queue_timestamp[vhost]
                                 )
                                 current_rate = (
                                     current_count - self._last_queue_counts[metric_name]
@@ -185,7 +186,7 @@ class RabbitMqSource(IntervalSource):
                             )
             except aiohttp.ContentTypeError as exception:
                 logger.error(f"Can't decode json response! {exception}")
-            self._last_queue_timestamp = current_queue_timestamp
+            self._last_queue_timestamp[vhost] = current_queue_timestamp
 
     async def update(self):
         auth = None
