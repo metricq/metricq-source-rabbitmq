@@ -84,109 +84,126 @@ class RabbitMqSource(IntervalSource):
 
     async def _update_exchanges(self, session: aiohttp.ClientSession, vhost: str):
         vhost_config = self._vhosts[vhost]
-        async with session.get(
-            self._host
-            / "api/exchanges"
-            / urllib.parse.quote_plus(vhost_config["vhost"])
-        ) as resp:
-            current_exchange_timestamp = Timestamp.now()
-            try:
-                for exchange in await resp.json():
-                    if exchange["name"] in vhost_config.get("exchanges", {}):
-                        metric_name_prefix = f"{self._prefix}.{vhost}.exchange.{exchange['name'].replace('.', '_').replace('-', '_')}"
-                        for rate in vhost_config["exchanges"][exchange["name"]].get(
-                            "rates", []
-                        ):
-                            try:
-                                current_count = exchange["message_stats"][rate]
-                            except KeyError:
-                                logger.debug(
-                                    f"Message stat {rate} for exchange {exchange['name']} missing."
-                                )
-                                continue
-                            metric_name = f"{metric_name_prefix}.{rate}.rate"
-
-                            if (
-                                vhost in self._last_exchange_timestamp
-                                and metric_name in self._last_exchange_counts
+        try:
+            async with session.get(
+                self._host
+                / "api/exchanges"
+                / urllib.parse.quote_plus(vhost_config["vhost"])
+            ) as resp:
+                current_exchange_timestamp = Timestamp.now()
+                try:
+                    for exchange in await resp.json():
+                        if exchange["name"] in vhost_config.get("exchanges", {}):
+                            metric_name_prefix = f"{self._prefix}.{vhost}.exchange.{exchange['name'].replace('.', '_').replace('-', '_')}"
+                            for rate in vhost_config["exchanges"][exchange["name"]].get(
+                                "rates", []
                             ):
-                                diff = (
-                                    current_exchange_timestamp
-                                    - self._last_exchange_timestamp[vhost]
-                                )
-                                current_rate = (
-                                    current_count
-                                    - self._last_exchange_counts[metric_name]
-                                ) / diff.s
-                                logger.debug(f"{metric_name} rate is {current_rate}")
-                                self[metric_name].append(
-                                    current_exchange_timestamp, current_rate
-                                )
-                            else:
-                                logger.debug(f"{metric_name} count is {current_count}")
-                                logger.info(
-                                    f"First request for {metric_name}. Only storing for internal state!"
-                                )
-                            self._last_exchange_counts[metric_name] = current_count
-            except aiohttp.ContentTypeError as exception:
-                logger.error(f"Can't decode json response! {exception}")
-            self._last_exchange_timestamp[vhost] = current_exchange_timestamp
+                                try:
+                                    current_count = exchange["message_stats"][rate]
+                                except KeyError:
+                                    logger.debug(
+                                        f"Message stat {rate} for exchange {exchange['name']} missing."
+                                    )
+                                    continue
+                                metric_name = f"{metric_name_prefix}.{rate}.rate"
+
+                                if (
+                                    vhost in self._last_exchange_timestamp
+                                    and metric_name in self._last_exchange_counts
+                                ):
+                                    diff = (
+                                        current_exchange_timestamp
+                                        - self._last_exchange_timestamp[vhost]
+                                    )
+                                    current_rate = (
+                                        current_count
+                                        - self._last_exchange_counts[metric_name]
+                                    ) / diff.s
+                                    logger.debug(
+                                        f"{metric_name} rate is {current_rate}"
+                                    )
+                                    self[metric_name].append(
+                                        current_exchange_timestamp, current_rate
+                                    )
+                                else:
+                                    logger.debug(
+                                        f"{metric_name} count is {current_count}"
+                                    )
+                                    logger.info(
+                                        f"First request for {metric_name}. Only storing for internal state!"
+                                    )
+                                self._last_exchange_counts[metric_name] = current_count
+                except aiohttp.ContentTypeError as exception:
+                    logger.error(f"Can't decode json response! {exception}")
+                self._last_exchange_timestamp[vhost] = current_exchange_timestamp
+        except aiohttp.ClientConnectorError as exception:
+            logger.error(f"Can't connect to rabbitmq! {exception}")
 
     async def _update_queues(self, session: aiohttp.ClientSession, vhost: str):
         vhost_config = self._vhosts[vhost]
-        async with session.get(
-            self._host / "api/queues" / urllib.parse.quote_plus(vhost_config["vhost"])
-        ) as resp:
-            current_queue_timestamp = Timestamp.now()
-            try:
-                for queue in await resp.json():
-                    if queue["name"] in vhost_config.get("queues", {}):
-                        metric_name_prefix = f"{self._prefix}.{vhost}.queue.{queue['name'].replace('.', '_').replace('-', '_')}"
-                        for rate in vhost_config["queues"][queue["name"]].get(
-                            "rates", []
-                        ):
-                            try:
-                                current_count = queue["message_stats"][rate]
-                            except KeyError:
-                                logger.debug(
-                                    f"Message stat {rate} for queue {queue['name']} missing."
-                                )
-                                continue
-                            metric_name = f"{metric_name_prefix}.{rate}.rate"
-
-                            if (
-                                vhost in self._last_queue_timestamp
-                                and metric_name in self._last_queue_counts
+        try:
+            async with session.get(
+                self._host
+                / "api/queues"
+                / urllib.parse.quote_plus(vhost_config["vhost"])
+            ) as resp:
+                current_queue_timestamp = Timestamp.now()
+                try:
+                    for queue in await resp.json():
+                        if queue["name"] in vhost_config.get("queues", {}):
+                            metric_name_prefix = f"{self._prefix}.{vhost}.queue.{queue['name'].replace('.', '_').replace('-', '_')}"
+                            for rate in vhost_config["queues"][queue["name"]].get(
+                                "rates", []
                             ):
-                                diff = (
-                                    current_queue_timestamp
-                                    - self._last_queue_timestamp[vhost]
-                                )
-                                current_rate = (
-                                    current_count - self._last_queue_counts[metric_name]
-                                ) / diff.s
-                                logger.debug(f"{metric_name} rate is {current_rate}")
-                                self[metric_name].append(
-                                    current_queue_timestamp, current_rate
-                                )
-                            else:
+                                try:
+                                    current_count = queue["message_stats"][rate]
+                                except KeyError:
+                                    logger.debug(
+                                        f"Message stat {rate} for queue {queue['name']} missing."
+                                    )
+                                    continue
+                                metric_name = f"{metric_name_prefix}.{rate}.rate"
+
+                                if (
+                                    vhost in self._last_queue_timestamp
+                                    and metric_name in self._last_queue_counts
+                                ):
+                                    diff = (
+                                        current_queue_timestamp
+                                        - self._last_queue_timestamp[vhost]
+                                    )
+                                    current_rate = (
+                                        current_count
+                                        - self._last_queue_counts[metric_name]
+                                    ) / diff.s
+                                    logger.debug(
+                                        f"{metric_name} rate is {current_rate}"
+                                    )
+                                    self[metric_name].append(
+                                        current_queue_timestamp, current_rate
+                                    )
+                                else:
+                                    logger.debug(
+                                        f"{metric_name} count is {current_count}"
+                                    )
+                                    logger.info(
+                                        f"First request for {metric_name}. Only storing for internal state!"
+                                    )
+                                self._last_queue_counts[metric_name] = current_count
+                            for count in vhost_config["queues"][queue["name"]].get(
+                                "counts", []
+                            ):
+                                current_count = queue[count]
+                                metric_name = f"{metric_name_prefix}.{count}.count"
                                 logger.debug(f"{metric_name} count is {current_count}")
-                                logger.info(
-                                    f"First request for {metric_name}. Only storing for internal state!"
+                                self[metric_name].append(
+                                    current_queue_timestamp, current_count
                                 )
-                            self._last_queue_counts[metric_name] = current_count
-                        for count in vhost_config["queues"][queue["name"]].get(
-                            "counts", []
-                        ):
-                            current_count = queue[count]
-                            metric_name = f"{metric_name_prefix}.{count}.count"
-                            logger.debug(f"{metric_name} count is {current_count}")
-                            self[metric_name].append(
-                                current_queue_timestamp, current_count
-                            )
-            except aiohttp.ContentTypeError as exception:
-                logger.error(f"Can't decode json response! {exception}")
-            self._last_queue_timestamp[vhost] = current_queue_timestamp
+                except aiohttp.ContentTypeError as exception:
+                    logger.error(f"Can't decode json response! {exception}")
+                self._last_queue_timestamp[vhost] = current_queue_timestamp
+        except aiohttp.ClientConnectorError as exception:
+            logger.error(f"Can't connect to rabbitmq! {exception}")
 
     async def update(self):
         auth = None
