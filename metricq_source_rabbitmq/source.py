@@ -193,7 +193,13 @@ class RabbitMqSource(IntervalSource):
                             for count in vhost_config["queues"][queue["name"]].get(
                                 "counts", []
                             ):
-                                current_count = queue[count]
+                                try:
+                                    current_count = queue[count]
+                                except KeyError:
+                                    logger.debug(
+                                        f"Count {count} for queue {queue['name']} missing."
+                                    )
+                                    continue
                                 metric_name = f"{metric_name_prefix}.{count}.count"
                                 logger.debug(f"{metric_name} count is {current_count}")
                                 self[metric_name].append(
