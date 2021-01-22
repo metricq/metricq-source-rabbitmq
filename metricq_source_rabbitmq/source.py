@@ -27,6 +27,8 @@ from yarl import URL
 
 logger = get_logger()
 
+__version__ = "0.2"
+
 
 class RabbitMqSource(IntervalSource):
     def __init__(self, *args, **kwargs):
