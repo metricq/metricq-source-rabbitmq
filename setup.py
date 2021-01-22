@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="metricq_source_rabbitmq",
-    version="0.1",
+    version="0.2",
     author="TU Dresden",
     python_requires=">=3.8",
     packages=["metricq_source_rabbitmq"],
@@ -15,7 +15,7 @@ setup(
         "aiomonitor",
         "click",
         "click_log",
-        "metricq~=1.1",
+        "metricq~=1.4",
         "aiohttp",
         "yarl",
     ],
