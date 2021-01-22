@@ -122,9 +122,14 @@ class RabbitMqSource(IntervalSource):
                                     logger.debug(
                                         f"{metric_name} rate is {current_rate}"
                                     )
-                                    self[metric_name].append(
-                                        current_exchange_timestamp, current_rate
-                                    )
+                                    if current_rate >= 0:
+                                        self[metric_name].append(
+                                            current_exchange_timestamp, current_rate
+                                        )
+                                    else:
+                                        logger.warn(
+                                            f"Skipping negative rate {rate} for exchange {exchange['name']}."
+                                        )
                                 else:
                                     logger.debug(
                                         f"{metric_name} count is {current_count}"
@@ -179,9 +184,14 @@ class RabbitMqSource(IntervalSource):
                                     logger.debug(
                                         f"{metric_name} rate is {current_rate}"
                                     )
-                                    self[metric_name].append(
-                                        current_queue_timestamp, current_rate
-                                    )
+                                    if current_rate >= 0:
+                                        self[metric_name].append(
+                                            current_queue_timestamp, current_rate
+                                        )
+                                    else:
+                                        logger.warn(
+                                            f"Skipping negative rate {rate} for queue {queue['name']}."
+                                        )
                                 else:
                                     logger.debug(
                                         f"{metric_name} count is {current_count}"
