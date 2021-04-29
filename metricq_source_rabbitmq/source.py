@@ -79,7 +79,7 @@ class RabbitMqSource(IntervalSource):
                         "rate": metric_rate,
                     }
                 for memory in queue_config.get("memory", []):
-                    metrics[f"{metric_name_prefix}.{memory}.bytes"] = {
+                    metrics[f"{metric_name_prefix}.{memory}.size"] = {
                         "unit": "bytes",
                         "rate": metric_rate,
                     }
@@ -232,7 +232,7 @@ class RabbitMqSource(IntervalSource):
                                         f"Memory statistic {memory!r} for queue {queue['name']} missing."
                                     )
                                     continue
-                                metric_name = f"{metric_name_prefix}.{memory}.bytes"
+                                metric_name = f"{metric_name_prefix}.{memory}.size"
                                 logger.debug(
                                     f"{metric_name} memory stat is {current_memory}"
                                 )
