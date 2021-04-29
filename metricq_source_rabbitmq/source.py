@@ -78,6 +78,11 @@ class RabbitMqSource(IntervalSource):
                         "unit": "msg",
                         "rate": metric_rate,
                     }
+                for memory in queue_config.get("memory", []):
+                    metrics[f"{metric_name_prefix}.{memory}.bytes"] = {
+                        "unit": "bytes",
+                        "rate": metric_rate,
+                    }
 
             self._vhosts[vhost["name"]] = vhost_config
 
@@ -217,6 +222,24 @@ class RabbitMqSource(IntervalSource):
                                 self[metric_name].append(
                                     current_queue_timestamp, current_count
                                 )
+                            for memory in vhost_config["queues"][queue["name"]].get(
+                                "memory", []
+                            ):
+                                try:
+                                    current_memory = queue[memory]
+                                except KeyError:
+                                    logger.debug(
+                                        f"Memory statistic {memory!r} for queue {queue['name']} missing."
+                                    )
+                                    continue
+                                metric_name = f"{metric_name_prefix}.{memory}.bytes"
+                                logger.debug(
+                                    f"{metric_name} memory stat is {current_memory}"
+                                )
+                                self[metric_name].append(
+                                    current_queue_timestamp, current_memory
+                                )
+
                 except aiohttp.ContentTypeError as exception:
                     logger.error(f"Can't decode json response! {exception}")
                 self._last_queue_timestamp[vhost] = current_queue_timestamp
