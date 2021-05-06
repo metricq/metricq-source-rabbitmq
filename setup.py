@@ -15,7 +15,7 @@ setup(
         "aiomonitor",
         "click",
         "click_log",
-        "metricq~=1.4",
+        "metricq~=2.0",
         "aiohttp",
         "yarl",
     ],

@@ -23,6 +23,7 @@ from typing import Dict, Optional
 import aiohttp
 import metricq
 from metricq import IntervalSource, Timestamp, get_logger
+from metricq.types import Timedelta
 from yarl import URL
 
 logger = get_logger()
@@ -45,13 +46,13 @@ class RabbitMqSource(IntervalSource):
 
     @metricq.rpc_handler("config")
     async def _on_config(self, **config):
-        self.period = config.get("interval", 1)
+        self.period = Timedelta.from_s(config.get("interval", 1))
         self._prefix = config.get("prefix", "")
         self._host = URL(config.get("host"))
         self._username = config.get("username")
         self._password = config.get("password")
 
-        metric_rate = 1.0 / self.period
+        metric_rate = 1.0 / self.period.s
 
         metrics = {}
         for vhost in config.get("vhosts", []):
