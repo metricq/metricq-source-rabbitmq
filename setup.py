@@ -4,7 +4,7 @@ setup(
     name="metricq_source_rabbitmq",
     version="0.2",
     author="TU Dresden",
-    python_requires=">=3.8",
+    python_requires=">=3.10",
     packages=["metricq_source_rabbitmq"],
     scripts=[],
     entry_points="""
@@ -15,7 +15,7 @@ setup(
         "aiomonitor",
         "click",
         "click_log",
-        "metricq~=3.0",
+        "metricq~=4.0",
         "aiohttp",
         "yarl",
     ],
