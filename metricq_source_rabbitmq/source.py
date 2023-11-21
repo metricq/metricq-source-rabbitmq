@@ -22,8 +22,7 @@ from typing import Dict, Optional
 
 import aiohttp
 import metricq
-from metricq import IntervalSource, Timestamp, get_logger
-from metricq.types import Timedelta
+from metricq import IntervalSource, Timedelta, Timestamp, get_logger
 from yarl import URL
 
 logger = get_logger()

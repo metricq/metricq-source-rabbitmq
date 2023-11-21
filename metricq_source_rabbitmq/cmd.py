@@ -51,7 +51,7 @@ def source_cmd(server, token, monitor, log_to_journal):
         except ImportError:
             logger.error("Can't enable journal logger, systemd package not found!")
 
-    src = RabbitMqSource(token=token, management_url=server)
+    src = RabbitMqSource(token=token, url=server)
     if monitor:
         with aiomonitor.start_monitor(src.event_loop, locals={"source": src}):
             src.run()
