@@ -93,9 +93,8 @@ class RabbitMqSource(IntervalSource):
         vhost_config = self._vhosts[vhost]
         try:
             async with session.get(
-                (self._host / "api/exchanges/").join(
-                    URL(urllib.parse.quote_plus(vhost_config["vhost"]))
-                )
+                (self._host / "api/exchanges").joinpath(
+                    urllib.parse.quote_plus(vhost_config["vhost"]), encoded=True)
             ) as resp:
                 current_exchange_timestamp = Timestamp.now()
                 try:
@@ -157,9 +156,8 @@ class RabbitMqSource(IntervalSource):
         vhost_config = self._vhosts[vhost]
         try:
             async with session.get(
-                (self._host / "api/queues/").join(
-                    URL(urllib.parse.quote_plus(vhost_config["vhost"]))
-                )
+                (self._host / "api/queues").joinpath(
+                    urllib.parse.quote_plus(vhost_config["vhost"]), encoded=True)
             ) as resp:
                 current_queue_timestamp = Timestamp.now()
                 try:
