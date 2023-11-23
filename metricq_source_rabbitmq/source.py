@@ -148,6 +148,8 @@ class RabbitMqSource(IntervalSource):
                 except aiohttp.ContentTypeError as exception:
                     logger.error(f"Can't decode json response! {exception}")
                 self._last_exchange_timestamp[vhost] = current_exchange_timestamp
+        except aiohttp.ClientResponseError as exception:
+            logger.error(f"Request to rabbitmq failed! {exception}")
         except aiohttp.ClientConnectorError as exception:
             logger.error(f"Can't connect to rabbitmq! {exception}")
 
@@ -218,7 +220,8 @@ class RabbitMqSource(IntervalSource):
                                     )
                                     continue
                                 metric_name = f"{metric_name_prefix}.{count}.count"
-                                logger.debug(f"{metric_name} count is {current_count}")
+                                logger.debug(
+                                    f"{metric_name} count is {current_count}")
                                 self[metric_name].append(
                                     current_queue_timestamp, current_count
                                 )
@@ -243,14 +246,17 @@ class RabbitMqSource(IntervalSource):
                 except aiohttp.ContentTypeError as exception:
                     logger.error(f"Can't decode json response! {exception}")
                 self._last_queue_timestamp[vhost] = current_queue_timestamp
+        except aiohttp.ClientResponseError as exception:
+            logger.error(f"Request to rabbitmq failed! {exception}")
         except aiohttp.ClientConnectorError as exception:
             logger.error(f"Can't connect to rabbitmq! {exception}")
 
     async def update(self):
         auth = None
         if self._username and self._password:
-            auth = aiohttp.BasicAuth(login=self._username, password=self._password)
-        async with aiohttp.ClientSession(auth=auth) as session:
+            auth = aiohttp.BasicAuth(
+                login=self._username, password=self._password)
+        async with aiohttp.ClientSession(auth=auth, raise_for_status=True) as session:
             for vhost in self._vhosts:
                 await self._update_exchanges(session, vhost)
                 await self._update_queues(session, vhost)
